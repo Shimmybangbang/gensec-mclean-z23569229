@@ -2,7 +2,7 @@ import os
 import readline
 from pathlib import Path
 from dotenv import load_dotenv
-from langchain_classic import hub
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_core.output_parsers import StrOutputParser
@@ -24,8 +24,20 @@ vectorstore = Chroma(
 
 retriever = vectorstore.as_retriever()
 
-# Pull a standard RAG prompt from LangChain Hub.
-prompt = hub.pull("rlm/rag-prompt")
+# A local, trusted RAG prompt instead of hub.pull("rlm/rag-prompt"): pulling
+# a prompt by owner/name from LangChain Hub now raises ValueError by default
+# ("prompts may contain untrusted serialized LangChain objects"), and
+# bypassing that check with dangerously_pull_public_prompt=True is exactly
+# the kind of deserialization risk it's warning about.
+prompt = ChatPromptTemplate.from_template(
+    "You are an assistant for question-answering tasks. Use the following "
+    "pieces of retrieved context to answer the question. If you don't know "
+    "the answer, just say that you don't know. Use three sentences maximum "
+    "and keep the answer concise.\n\n"
+    "Question: {question}\n\n"
+    "Context: {context}\n\n"
+    "Answer:"
+)
 
 def format_docs(docs):
     """Join retrieved document contents into one prompt context string."""
