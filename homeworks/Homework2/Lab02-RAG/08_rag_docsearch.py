@@ -1,0 +1,43 @@
+from langchain_chroma import Chroma
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+import readline
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load the shared API keys/model names from the repo-level .ENV file.
+load_dotenv(Path(__file__).resolve().parent.parent.parent / ".ENV")
+
+# Open the persisted RAG database with the original Google embeddings setup.
+vectorstore = Chroma(
+    embedding_function=GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", task_type="retrieval_query"),
+    persist_directory="./rag_data/.chromadb"
+)
+
+def search_db(query):
+    """Search the vector database and print the closest matching source."""
+    # Run similarity search and show the closest source document.
+    docs = vectorstore.similarity_search(query)
+    print(f"Query database for: {query}")
+    if docs:
+        print(f"Closest document match in database: {docs[0].metadata['source']}")
+    else:
+        print("No matching documents")
+
+print("RAG database initialized.")
+retriever = vectorstore.as_retriever()
+
+# List indexed sources before accepting search queries.
+document_data_sources = set()
+for doc_metadata in retriever.vectorstore.get()['metadatas']:
+    document_data_sources.add(doc_metadata['source']) 
+for doc in document_data_sources:
+    print(f"  {doc}")
+
+print("This program queries documents in the RAG database that are similar to whatever is entered.")
+while True:
+    line = input(">> ")
+    if line:
+        # Search the vector database for each entered query.
+        search_db(line)
+    else:
+        break

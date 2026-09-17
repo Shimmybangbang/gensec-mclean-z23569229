@@ -1,0 +1,9 @@
+env
+.env
+.venv
+.chromadb
+__pycache__
+*.pyc
+
+# instructor's reference lab clone — not part of the submission
+gensec-code/
