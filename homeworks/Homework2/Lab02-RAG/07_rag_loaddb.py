@@ -44,8 +44,16 @@ def load_wikipedia(query, load_max_docs=2):
     load_docs(WikipediaLoader(query=query, load_max_docs=load_max_docs).load())
 
 def load_arxiv(query):
-    """Load an arXiv paper and add it to the vector database."""
-    # Load an arXiv paper and normalize its source metadata.
+    """Load an arXiv paper and add it to the vector database.
+
+    Known limitation: langchain_community==0.4.2's ArxivAPIWrapper calls the
+    old `Search.results()` method from the `arxiv` package, which was
+    replaced by `arxiv.Client().results(search)` in arxiv>=2.0. This raises
+    `AttributeError: 'Search' object has no attribute 'results'` with
+    arxiv==4.0.1 (the current release). langchain_community is effectively
+    unmaintained (deprecation warning on import), so this loader is disabled
+    below rather than worked around.
+    """
     docs = ArxivLoader(query=query, load_max_docs=1).load()
     docs[0].metadata['source'] = f"arxiv:{query}"
     load_docs(docs)
@@ -100,9 +108,12 @@ wiki_query = "LangChain"
 print(f"Loading Wikipedia pages on: {wiki_query}")
 load_wikipedia(wiki_query)
 
-arxiv_query = "2310.03714"
-print(f"Loading arxiv document: {arxiv_query}")
-load_arxiv(arxiv_query)
+# load_arxiv() is disabled here -- it currently raises AttributeError due to
+# an upstream incompatibility between langchain_community and the installed
+# arxiv package. See load_arxiv()'s docstring for details.
+# arxiv_query = "2310.03714"
+# print(f"Loading arxiv document: {arxiv_query}")
+# load_arxiv(arxiv_query)
 
 github_file = "butcher.py"
 print(f"Loading github file(s) with ending: {github_file}")
