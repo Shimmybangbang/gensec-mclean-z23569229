@@ -9,8 +9,9 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 import chainlit as cl
 
-# Load the shared API keys/model names from the repo-level .ENV file.
-load_dotenv(Path(__file__).resolve().parent.parent.parent / ".ENV")
+# Load the shared API keys/model names from the course repo root's .env file
+# (gensec-mclean-z23569229/.env), four levels up from this script.
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 # Configure the chat model used by the Chainlit RAG app.
 llm = ChatGoogleGenerativeAI(model=os.getenv("GOOGLE_MODEL"))

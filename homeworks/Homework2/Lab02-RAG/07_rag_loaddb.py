@@ -1,5 +1,5 @@
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import AsyncHtmlLoader, DirectoryLoader, TextLoader, PyPDFDirectoryLoader, Docx2txtLoader, UnstructuredMarkdownLoader, WikipediaLoader, ArxivLoader, CSVLoader, GithubFileLoader
+from langchain_community.document_loaders import AsyncHtmlLoader, DirectoryLoader, TextLoader, PyPDFDirectoryLoader, Docx2txtLoader, UnstructuredMarkdownLoader, ArxivLoader, CSVLoader, GithubFileLoader
 from langchain_core.documents import Document
 from youtube_transcript_api import YouTubeTranscriptApi
 from langchain_chroma import Chroma
@@ -8,8 +8,14 @@ import readline
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load the shared API keys/model names from the repo-level .ENV file.
-load_dotenv(Path(__file__).resolve().parent.parent.parent / ".ENV")
+# Custom loader (extends langchain_core's BaseLoader) that fixes the stock
+# community WikipediaLoader's HTTP-only API URL, missing User-Agent, and lack
+# of rate limiting -- see wikipedia_loader.py.
+from wikipedia_loader import WikipediaLoader
+
+# Load the shared API keys/model names from the course repo root's .env file
+# (gensec-mclean-z23569229/.env), four levels up from this script.
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 # Open or create the persistent Chroma vector database.
 vectorstore = Chroma(
@@ -24,19 +30,18 @@ def load_docs(docs):
     splits = text_splitter.split_documents(docs)
 
     print(f"# splits: {len(splits)}, split0: {len(splits[0].page_content)} chars")
-
-#    vectorstore.add_documents(documents=splits)
-    vectorstore.add_documents(documents=[splits[0]])
+    vectorstore.add_documents(documents=splits)
 
 def load_urls(urls):
     """Load web pages from URLs and add them to the vector database."""
     # Load web pages and pass the resulting documents into the shared pipeline.
     load_docs(AsyncHtmlLoader(urls).load())
 
-def load_wikipedia(query):
+def load_wikipedia(query, load_max_docs=2):
     """Load Wikipedia pages for a query and add them to the vector database."""
-    # Load a Wikipedia page for the requested topic.
-    load_docs(WikipediaLoader(query=query, load_max_docs=1).load())
+    # Use the local WikipediaLoader so requests include a valid User-Agent
+    # and rate limiting instead of the community loader's defaults.
+    load_docs(WikipediaLoader(query=query, load_max_docs=load_max_docs).load())
 
 def load_arxiv(query):
     """Load an arXiv paper and add it to the vector database."""

@@ -4,8 +4,9 @@ import readline
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load the shared API keys/model names from the repo-level .ENV file.
-load_dotenv(Path(__file__).resolve().parent.parent.parent / ".ENV")
+# Load the shared API keys/model names from the course repo root's .env file
+# (gensec-mclean-z23569229/.env), four levels up from this script.
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 # Open the persisted RAG database with the original Google embeddings setup.
 vectorstore = Chroma(
