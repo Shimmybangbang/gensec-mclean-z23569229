@@ -47,7 +47,7 @@ NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 VT_API_URL = "https://www.virustotal.com/api/v3"
 USER_AGENT = "hw4-secintel-mcp/0.1"
 
-mcp = FastMCP("secintel")
+mcp = FastMCP("secintel", log_level="WARNING")
 
 
 # --------------------------------------------------------------------------
