@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stego Studio</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<main>
+  <h1>Stego Studio</h1>
+  <p class="sub">Hide secret text inside an image, or reveal text hidden in one. Runs entirely on your machine.</p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="encode">Hide a message</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="decode">Reveal a message</button>
+  </div>
+
+  <section class="card panel" id="panel-encode">
+    <form id="encode-form">
+      <label for="enc-image">Cover image <span class="hint">(PNG, JPG, BMP…)</span></label>
+      <input id="enc-image" name="image" type="file" accept="image/*" required>
+      <div class="meta" id="enc-capacity"></div>
+
+      <label for="enc-message">Secret message</label>
+      <textarea id="enc-message" name="message" required></textarea>
+      <div class="meta" id="enc-count">0 bytes</div>
+
+      <label for="enc-password">Password <span class="hint">(recommended — encrypts the message and makes it much harder to detect)</span></label>
+      <input id="enc-password" name="password" type="password" autocomplete="new-password">
+
+      <button class="primary" type="submit">Hide message</button>
+    </form>
+    <div id="enc-result"></div>
+  </section>
+
+  <section class="card panel" id="panel-decode" hidden>
+    <form id="decode-form">
+      <label for="dec-image">Image with hidden message <span class="hint">(the PNG this tool produced)</span></label>
+      <input id="dec-image" name="image" type="file" accept="image/*" required>
+
+      <label for="dec-password">Password <span class="hint">(if one was used)</span></label>
+      <input id="dec-password" name="password" type="password" autocomplete="off">
+
+      <button class="primary" type="submit">Reveal message</button>
+    </form>
+    <div id="dec-result"></div>
+  </section>
+
+  <p class="note">Output is always saved as PNG. Don't convert it to JPG or send it through apps that
+  recompress images (most messengers/social media) — that destroys the hidden data.</p>
+</main>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

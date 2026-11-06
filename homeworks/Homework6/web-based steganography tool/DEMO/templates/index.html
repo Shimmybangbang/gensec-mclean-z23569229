@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stego Demo</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1c1f24; --muted:#5f6670; --border:#d9dde3;
+          --accent:#2f6fde; --accent-text:#fff; --err:#b3261e; --ok:#1e7a3c; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14161a; --card:#1d2026; --text:#e7e9ec; --muted:#9aa1ab; --border:#33373f;
+            --accent:#6c9ef8; --accent-text:#0d1117; --err:#f2827a; --ok:#6fd08f; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+         font:16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .tabs { display:flex; gap:8px; margin-bottom:16px; }
+  .tabs button { flex:1; padding:10px; border:1px solid var(--border); background:var(--card);
+                 color:var(--text); border-radius:8px; font-size:1rem; cursor:pointer; }
+  .tabs button[aria-selected="true"] { background:var(--accent); color:var(--accent-text); border-color:var(--accent); }
+  section { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; }
+  label { display:block; font-weight:600; margin:14px 0 6px; }
+  label:first-child { margin-top:0; }
+  input[type=file], input[type=password], textarea { width:100%; padding:10px; font:inherit;
+      border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); }
+  textarea { min-height:120px; resize:vertical; }
+  .hint { color:var(--muted); font-size:.875rem; margin-top:4px; }
+  .go { margin-top:18px; padding:11px 20px; border:0; border-radius:8px; background:var(--accent);
+        color:var(--accent-text); font-size:1rem; font-weight:600; cursor:pointer; }
+  .go:disabled { opacity:.6; cursor:wait; }
+  .status { margin-top:14px; min-height:1.5em; }
+  .status.err { color:var(--err); } .status.ok { color:var(--ok); }
+  .result img { max-width:100%; border:1px solid var(--border); border-radius:8px; margin-top:12px; }
+  .result a { display:inline-block; margin-top:10px; color:var(--accent); font-weight:600; }
+  pre { white-space:pre-wrap; word-break:break-word; background:var(--bg); border:1px solid var(--border);
+        border-radius:8px; padding:12px; margin-top:12px; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Steganography Tool</h1>
+  <p class="sub">Hide a text message inside an image, or reveal one. Everything runs on this computer.</p>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="hide">Hide a message</button>
+    <button role="tab" aria-selected="false" data-tab="reveal">Reveal a message</button>
+  </div>
+
+  <section id="hide">
+    <form id="encodeForm">
+      <label for="encImage">Cover image</label>
+      <input id="encImage" name="image" type="file" accept="image/png,image/bmp,image/jpeg,image/webp,image/gif" required>
+      <div class="hint" id="capacity">PNG, BMP, JPEG, WebP or GIF. The result is always saved as PNG.</div>
+
+      <label for="message">Secret message</label>
+      <textarea id="message" name="message" required></textarea>
+      <div class="hint" id="msgSize">0 bytes</div>
+
+      <label for="encPass">Password (optional)</label>
+      <input id="encPass" name="password" type="password" autocomplete="new-password">
+      <div class="hint">With a password, the message is encrypted with AES-256-GCM before it is hidden.</div>
+
+      <button class="go" type="submit">Hide message</button>
+      <div class="status" role="status"></div>
+      <div class="result" hidden>
+        <img alt="Image with hidden message">
+        <a download="stego.png">Download stego.png</a>
+      </div>
+    </form>
+  </section>
+
+  <section id="reveal" hidden>
+    <form id="decodeForm">
+      <label for="decImage">Image with a hidden message</label>
+      <input id="decImage" name="image" type="file" accept="image/png,image/bmp" required>
+      <div class="hint">Use the PNG this tool produced. Re-saving or compressing it destroys the message.</div>
+
+      <label for="decPass">Password (if one was used)</label>
+      <input id="decPass" name="password" type="password" autocomplete="off">
+
+      <button class="go" type="submit">Reveal message</button>
+      <div class="status" role="status"></div>
+      <pre class="result" hidden></pre>
+    </form>
+  </section>
+</main>
+
+<script>
+document.querySelectorAll('.tabs button').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b === btn));
+  document.getElementById('hide').hidden = btn.dataset.tab !== 'hide';
+  document.getElementById('reveal').hidden = btn.dataset.tab !== 'reveal';
+}));
+
+let cap = null;
+const msg = document.getElementById('message'), msgSize = document.getElementById('msgSize');
+function updateSize() {
+  const n = new TextEncoder().encode(msg.value).length;
+  msgSize.textContent = cap === null ? `${n} bytes` : `${n} bytes of about ${cap} available`;
+}
+msg.addEventListener('input', updateSize);
+
+document.getElementById('encImage').addEventListener('change', async e => {
+  const capEl = document.getElementById('capacity');
+  cap = null; updateSize();
+  if (!e.target.files[0]) return;
+  const fd = new FormData(); fd.append('image', e.target.files[0]);
+  const r = await fetch('/api/capacity', { method: 'POST', body: fd });
+  const j = await r.json().catch(() => ({ error: 'Unexpected server response.' }));
+  if (j.error) { capEl.textContent = j.error; return; }
+  cap = j.capacity;
+  capEl.textContent = `This image can hold about ${cap.toLocaleString()} bytes (password adds 44 bytes of overhead).`;
+  updateSize();
+});
+
+async function submit(form, url, onOk) {
+  const btn = form.querySelector('.go'), status = form.querySelector('.status'), result = form.querySelector('.result');
+  btn.disabled = true; result.hidden = true;
+  status.className = 'status'; status.textContent = 'Working…';
+  try {
+    const r = await fetch(url, { method: 'POST', body: new FormData(form) });
+    const j = await r.json().catch(() => ({ error: `Server error (${r.status}).` }));
+    if (j.error) { status.className = 'status err'; status.textContent = j.error; return; }
+    status.className = 'status ok';
+    onOk(j, status, result);
+    result.hidden = false;
+  } catch (err) {
+    status.className = 'status err'; status.textContent = 'Could not reach the server. Is app.py running?';
+  } finally { btn.disabled = false; }
+}
+
+document.getElementById('encodeForm').addEventListener('submit', e => {
+  e.preventDefault();
+  submit(e.target, '/api/encode', (j, status, result) => {
+    status.textContent = 'Message hidden. Download the PNG below.';
+    result.querySelector('img').src = j.image;
+    result.querySelector('a').href = j.image;
+  });
+});
+
+document.getElementById('decodeForm').addEventListener('submit', e => {
+  e.preventDefault();
+  submit(e.target, '/api/decode', (j, status, result) => {
+    status.textContent = 'Hidden message found:';
+    result.textContent = j.message;  // textContent, never innerHTML: the message is untrusted
+  });
+});
+</script>
+</body>
+</html>
